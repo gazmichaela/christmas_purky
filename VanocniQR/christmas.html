@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<title>Vánoční QR Quest</title>
+<style>
+body { background-color: #ffe6e6; font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+input { padding: 10px; font-size: 16px; margin: 5px; }
+button { padding: 10px 20px; font-size: 16px; background-color: #008000; color: white; border: none; border-radius: 10px; cursor: pointer; margin: 5px; }
+button:hover { background-color: #005500; }
+#qr-reader { width: 300px; margin: auto; }
+</style>
+<script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body>
+<h1>🎄 Vánoční QR Quest 🎅</h1>
+<div id="setup">
+  <p>Zadej název týmu:</p>
+  <input type="text" id="team" required>
+  <p>Zadej členy týmu (oddělené čárkou):</p>
+  <input type="text" id="members" required>
+  <br>
+  <button onclick="startGame()">Začít hru</button>
+</div>
+<div id="game" style="display:none;">
+  <p id="team-info"></p>
+  <p id="time">⏱ 0:00</p>
+  <div id="clue"></div>
+  <div id="qr-reader" style="display:none;"></div>
+  <div id="question"></div>
+</div>
+<script>
+let questions = [
+  {q: "Jaké zvíře tahá Santovy sáně?", type: "mc", options: ["A) Sob", "B) Kůň", "C) Pes"], a: "A", clue: "Další QR kód najdeš u lednice ve škole."},
+  {q: "Co nosí Ježíšek?", type: "text", a: "dárky", clue: "Další QR kód najdeš u šatny."},
+  {q: "Kolik je na adventním věnci svíček?", type: "mc", options: ["A) 3", "B) 4", "C) 5"], a: "B", clue: "Teď běž do učebny 32 – tam najdeš obálku!"}
+];
+
+let currentStage = 0;
+let startTime;
+let timerInterval;
+
+function startGame() {
+  const team = document.getElementById('team').value;
+  const members = document.getElementById('members').value;
+  if(!team || !members) return;
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('game').style.display = 'block';
+  document.getElementById('team-info').innerText = `Tým: ${team} | Členové: ${members}`;
+  startTime = new Date();
+  document.getElementById('clue').innerText = "První indicie: Jděte k hlavnímu vchodu školy.";
+  timerInterval = setInterval(updateTimer, 1000);
+  showQRScanner();
+}
+
+function updateTimer() {
+  const now = new Date();
+  const diff = Math.floor((now - startTime)/1000);
+  const minutes = Math.floor(diff/60);
+  const seconds = diff % 60;
+  document.getElementById('time').innerText = `⏱ ${minutes}:${seconds.toString().padStart(2,'0')}`;
+}
+
+function showQRScanner() {
+  document.getElementById('qr-reader').style.display = 'block';
+  const html5QrcodeScanner = new Html5QrcodeScanner(
+    "qr-reader", { fps: 10, qrbox: 250 });
+  html5QrcodeScanner.render(onScanSuccess);
+}
+
+function onScanSuccess(decodedText, decodedResult) {
+  document.getElementById('qr-reader').style.display = 'none';
+  showQuestion();
+}
+
+function showQuestion() {
+  const q = questions[currentStage];
+  const container = document.getElementById('question');
+  container.innerHTML = `<h2>${q.q}</h2>`;
+  if(q.type === 'mc') {
+    q.options.forEach(option => {
+      const btn = document.createElement('button');
+      btn.innerText = option;
+      btn.onclick = () => checkAnswer(option[0]);
+      container.appendChild(btn);
+    });
+  } else if(q.type === 'text') {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = 'textAnswer';
+    const btn = document.createElement('button');
+    btn.innerText = 'Odpovědět';
+    btn.onclick = () => checkAnswer(document.getElementById('textAnswer').value);
+    container.appendChild(input);
+    container.appendChild(document.createElement('br'));
+    container.appendChild(btn);
+  }
+}
+
+function checkAnswer(answer) {
+  const q = questions[currentStage];
+  if(answer.trim().toUpperCase() === q.a.toUpperCase()) {
+    currentStage++;
+    if(currentStage < questions.length) {
+      document.getElementById('clue').innerText = q.clue;
+      showQRScanner();
+      document.getElementById('question').innerHTML = '';
+    } else {
+      document.getElementById('clue').innerText = 'Gratulujeme! Najděte poslední obálku.';
+      document.getElementById('question').innerHTML = '';
+      clearInterval(timerInterval);
+    }
+  } else {
+    alert('Špatná odpověď! Zkus to znovu.');
+  }
+}
+</script>
+</body>
+</html>
